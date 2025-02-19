@@ -35,6 +35,29 @@ app.post("/register", async function (req, res) {
     }
 });
 
+app.post("/login", async function (req, res) {
+    try {
+        const email = req.body.username;
+        const password = req.body.password;
+
+        const foundUser = await User.findOne({
+            email: email,
+            password: password
+        });
+        if (foundUser) {
+            res.render("secrets");
+        }
+        else {
+            console.log("invalid")
+        }
+    } catch (err) {
+        console.log(err)
+    }
+
+
+}
+);
+
 
 
 
