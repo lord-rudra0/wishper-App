@@ -1,13 +1,13 @@
 import express from "express"
 import bodyParser from "body-parser";
 import mongoose from "mongoose"
-import encrypt from 'mongoose-encryption'
-import dotenv from "dotenv"
+// import encrypt from 'mongoose-encryption'
+// import dotenv from "dotenv"
 
 dotenv.config()
 
-let secret = process.env.SECRET;
-console.log(secret);
+// let secret = process.env.SECRET;
+// console.log(secret);
 
 const port = 5000;
 
@@ -53,10 +53,15 @@ app.post("/login", async function (req, res) {
 
         const foundUser = await User.findOne({
             email: email,
-            password: password
         });
+        console.log(foundUser); // Add this line to log the found user
         if (foundUser) {
-            res.render("secrets");
+            if (foundUser.password === password) {
+                res.render("secrets");
+            } else {
+                console.log("Invalid password");
+                res.send("Invalid password.");
+            }
         }
         else {
             console.log("invalid")
@@ -64,11 +69,7 @@ app.post("/login", async function (req, res) {
     } catch (err) {
         console.log(err)
     }
-
-
-}
-);
-
+});
 
 
 app.get("/login", function (req, res) {
@@ -98,7 +99,7 @@ const userScema = new mongoose.Schema({
     password: String
 })
 
-userScema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
+// userScema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
 
 const User = mongoose.model("User", userScema)
 
