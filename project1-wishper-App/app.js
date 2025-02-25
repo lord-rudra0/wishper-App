@@ -1,6 +1,14 @@
 import express from "express"
 import bodyParser from "body-parser";
 import mongoose from "mongoose"
+import encrypt from 'mongoose-encryption'
+import dotenv from "dotenv"
+
+dotenv.config()
+
+let secret = process.env.SECRET;
+console.log(secret);
+
 const port = 5000;
 
 const mongoURI = "mongodb://localhost:27017/userDB";
@@ -12,6 +20,7 @@ app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+
 
 
 app.get("/", function (req, res) {
@@ -35,6 +44,8 @@ app.post("/register", async function (req, res) {
     }
 });
 
+
+// 
 app.post("/login", async function (req, res) {
     try {
         const email = req.body.username;
@@ -57,7 +68,6 @@ app.post("/login", async function (req, res) {
 
 }
 );
-
 
 
 
@@ -87,6 +97,8 @@ const userScema = new mongoose.Schema({
     email: String,
     password: String
 })
+
+userScema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
 
 const User = mongoose.model("User", userScema)
 
