@@ -1,10 +1,11 @@
 import express from "express"
 import bodyParser from "body-parser";
 import mongoose from "mongoose"
+import md5 from "md5";
 // import encrypt from 'mongoose-encryption'
 // import dotenv from "dotenv"
 
-dotenv.config()
+// dotenv.config()
 
 // let secret = process.env.SECRET;
 // console.log(secret);
@@ -35,7 +36,7 @@ app.post("/register", async function (req, res) {
     try {
         const newUser = new User({
             email: req.body.username,
-            password: req.body.password,
+            password: md5(req.body.password),
         });
         await newUser.save()
         res.render("secrets")
@@ -49,7 +50,7 @@ app.post("/register", async function (req, res) {
 app.post("/login", async function (req, res) {
     try {
         const email = req.body.username;
-        const password = req.body.password;
+        const password = md5(req.body.password);
 
         const foundUser = await User.findOne({
             email: email,
