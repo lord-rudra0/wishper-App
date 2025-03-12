@@ -4,6 +4,8 @@ import mongoose from "mongoose"
 import session from "express-session"
 import passport from "passport";
 import passportLocalMongoose from "passport-local-mongoose"
+import LocalStrategy from 'passport-local';
+import passportLocal from "passport-local";
 
 // import bcrypt, { hash } from "bcrypt"
 // import md5 from "md5";
@@ -15,7 +17,7 @@ import passportLocalMongoose from "passport-local-mongoose"
 // let secret = process.env.SECRET;
 // console.log(secret);
 
-const port = 5000;
+const port = 3000;
 // const saltRounds = 10;
 
 const mongoURI = "mongodb://localhost:27017/userDB";
@@ -57,15 +59,17 @@ app.get("/secrets", function (req, res) {
 });
 
 app.post("/register", async function (req, res) {
-    email = req.body.email;
-    password = req.body.passport;
+    const email = req.body.username;
+    const password = req.body.password;
 
     User.register({ username: email }, password, function (err, User) {
         if (err) {
-            console.log("errror in user")
+            console.log("errror in user", err)
         }
         else {
-            passport.authenticate("local")(res, req, function () {
+            console.log("User registered successfully:", User); // Debugging log
+            passport.authenticate("local")(req, res, function () {
+                console.log("Authentication successful, redirecting..."); // Debugging log
                 res.redirect("/secrets");
             })
 
@@ -75,6 +79,24 @@ app.post("/register", async function (req, res) {
 });
 
 app.post("/login", async function (req, res) {
+    const user = new User({
+        email: req.body.username,
+        password: req.body.password
+    });
+
+    req.logIn(user, function (err) {
+        if (err) {
+            console.log("errror in user", err)
+        }
+        else {
+            console.log("User registered successfully:", User); // Debugging log
+            passport.authenticate("local")(req, res, function () {
+                console.log("Authentication successful, redirecting..."); // Debugging log
+                res.redirect("/secrets");
+            })
+        }
+    })
+
 
 });
 
@@ -151,6 +173,16 @@ app.get("/login", function (req, res) {
 });
 
 
+app.get('/logout', function (req, res, next) {
+    req.logout(function (err) {
+        if (err) { return next(err); }
+        res.redirect('/');
+    });
+});
+
+
+
+
 async function connectDB() {
     try {
         await mongoose.connect(mongoURI, {
@@ -177,7 +209,8 @@ const userScema = new mongoose.Schema({
 userScema.plugin(passportLocalMongoose);
 
 const User = mongoose.model("User", userScema)
-passport.use(User.createStrategy);
+// passport.use(User.createStrategy);
+passport.use(new passportLocal.Strategy(User.authenticate()));
 
 passport.serializeUser(User.serializeUser());
 passport.deserializeUser(User.deserializeUser())
