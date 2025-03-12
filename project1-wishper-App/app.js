@@ -1,7 +1,11 @@
 import express from "express"
 import bodyParser from "body-parser";
 import mongoose from "mongoose"
-import bcrypt, { hash } from "bcrypt"
+import session from "express-session"
+import passport from "passport";
+import passportLocalMongoose from "passport-local-mongoose"
+
+// import bcrypt, { hash } from "bcrypt"
 // import md5 from "md5";
 // import encrypt from 'mongoose-encryption'
 // import dotenv from "dotenv"
@@ -12,7 +16,7 @@ import bcrypt, { hash } from "bcrypt"
 // console.log(secret);
 
 const port = 5000;
-const saltRounds = 10;
+// const saltRounds = 10;
 
 const mongoURI = "mongodb://localhost:27017/userDB";
 
@@ -23,7 +27,16 @@ app.set('view engine', 'ejs');
 
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.static("public"));
+app.use(session({
+    secret: 'keyboard cat',
+    resave: false,
+    saveUninitialized: true,
+    // cookie: { secure: true }
+}))
 
+
+app.use(passport.initialize());
+app.use(passport.session());
 
 
 app.get("/", function (req, res) {
@@ -34,21 +47,54 @@ app.get("/register", function (req, res) {
     res.render("register");
 });
 
-app.post("/register", async function (req, res) {
-    try {
-        const hash = await bcrypt.hash(req.body.password, saltRounds)
-        const newUser = new User({
-            email: req.body.username,
-            password: hash
-        });
-
-        await newUser.save()
-        res.render("secrets")
+app.get("/secrets", function (req, res) {
+    if (req.isAuthenticated()) {
+        res.render("secrets");
     }
-    catch (err) {
-        console.log(err);
+    else {
+        res.redirect("/login")
     }
 });
+
+app.post("/register", async function (req, res) {
+    email = req.body.email;
+    password = req.body.passport;
+
+    User.register({ username: email }, password, function (err, User) {
+        if (err) {
+            console.log("errror in user")
+        }
+        else {
+            passport.authenticate("local")(res, req, function () {
+                res.redirect("/secrets");
+            })
+
+        }
+
+    })
+});
+
+app.post("/login", async function (req, res) {
+
+});
+
+// app.post("/register", async function (req, res) {
+
+
+//     try {
+//         const hash = await bcrypt.hash(req.body.password, saltRounds)
+//         const newUser = new User({
+//             email: req.body.username,
+//             password: hash
+//         });
+
+//         await newUser.save()
+//         res.render("secrets")
+//     }
+//     catch (err) {
+//         console.log(err);
+//     }
+// });
 //     try {
 //         const newUser = new User({
 //             email: req.body.username,
@@ -67,37 +113,37 @@ app.post("/register", async function (req, res) {
 
 
 // 
-app.post("/login", async function (req, res) {
-    try {
-        const email = req.body.username;
-        // const password = md5(req.body.password);
-        const enteredPassword = req.body.password;
+// app.post("/login", async function (req, res) {
+//     try {
+//         const email = req.body.username;
+//         // const password = md5(req.body.password);
+//         const enteredPassword = req.body.password;
 
-        const foundUser = await User.findOne({
-            email: email,
-        });
-        console.log(foundUser.password)
-        const isValid = await bcrypt.compare(enteredPassword, foundUser.password)
+//         const foundUser = await User.findOne({
+//             email: email,
+//         });
+//         console.log(foundUser.password)
+//         // const isValid = await bcrypt.compare(enteredPassword, foundUser.password)
 
-        console.log("Entered password:", enteredPassword);
-        console.log("founduser password", foundUser.password);
+//         console.log("Entered password:", enteredPassword);
+//         console.log("founduser password", foundUser.password);
 
-        console.log(foundUser); // Add this line to log the found user
-        if (foundUser) {
-            if (isValid) {
-                res.render("secrets");
-            } else {
-                console.log("Invalid password");
-                res.send("Invalid password.");
-            }
-        }
-        else {
-            console.log("invalid")
-        }
-    } catch (err) {
-        console.log(err)
-    }
-});
+//         console.log(foundUser); // Add this line to log the found user
+//         if (foundUser) {
+//             if (isValid) {
+//                 res.render("secrets");
+//             } else {
+//                 console.log("Invalid password");
+//                 res.send("Invalid password.");
+//             }
+//         }
+//         else {
+//             console.log("invalid")
+//         }
+//     } catch (err) {
+//         console.log(err)
+//     }
+// });
 
 
 app.get("/login", function (req, res) {
@@ -128,8 +174,13 @@ const userScema = new mongoose.Schema({
 })
 
 // userScema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
+userScema.plugin(passportLocalMongoose);
 
 const User = mongoose.model("User", userScema)
+passport.use(User.createStrategy);
+
+passport.serializeUser(User.serializeUser());
+passport.deserializeUser(User.deserializeUser())
 
 
 app.listen(port, function () {
