@@ -1,7 +1,8 @@
 import express from "express"
 import bodyParser from "body-parser";
 import mongoose from "mongoose"
-import md5 from "md5";
+import bcrypt, { hash } from "bcrypt"
+// import md5 from "md5";
 // import encrypt from 'mongoose-encryption'
 // import dotenv from "dotenv"
 
@@ -11,6 +12,7 @@ import md5 from "md5";
 // console.log(secret);
 
 const port = 5000;
+const saltRounds = 10;
 
 const mongoURI = "mongodb://localhost:27017/userDB";
 
@@ -34,30 +36,55 @@ app.get("/register", function (req, res) {
 
 app.post("/register", async function (req, res) {
     try {
+        const hash = await bcrypt.hash(req.body.password, saltRounds)
         const newUser = new User({
             email: req.body.username,
-            password: md5(req.body.password),
+            password: hash
         });
+
         await newUser.save()
         res.render("secrets")
-    } catch (err) {
+    }
+    catch (err) {
         console.log(err);
     }
 });
+//     try {
+//         const newUser = new User({
+//             email: req.body.username,
+//             // password: md5(req.body.password),
+//             bcrypt.hash(myPlaintextPassword, saltRounds, function (err, hash) {
+//                 // Store hash in your password DB.
+//             });
+
+//         });
+//         await newUser.save()
+//         res.render("secrets")
+//     } catch (err) {
+//         console.log(err);
+//     }
+// });
 
 
 // 
 app.post("/login", async function (req, res) {
     try {
         const email = req.body.username;
-        const password = md5(req.body.password);
+        // const password = md5(req.body.password);
+        const enteredPassword = req.body.password;
 
         const foundUser = await User.findOne({
             email: email,
         });
+        console.log(foundUser.password)
+        const isValid = await bcrypt.compare(enteredPassword, foundUser.password)
+
+        console.log("Entered password:", enteredPassword);
+        console.log("founduser password", foundUser.password);
+
         console.log(foundUser); // Add this line to log the found user
         if (foundUser) {
-            if (foundUser.password === password) {
+            if (isValid) {
                 res.render("secrets");
             } else {
                 console.log("Invalid password");
