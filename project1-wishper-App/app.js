@@ -15,6 +15,7 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 // import md5 from "md5";
 // import encrypt from 'mongoose-encryption'
 import 'dotenv/config'
+import e from "express";
 
 // dotenv.config()
 
@@ -69,6 +70,47 @@ app.get("/register", function (req, res) {
 
 app.get('/auth/google',
     passport.authenticate('google', { scope: ['profile'] }));
+
+
+app.get("/submit", function (req, res) {
+    if (req.isAuthenticated()) { res.render("submit"); }
+    else {
+        res.redirect("/login")
+    }
+
+});
+app.post("/submit", async function (req, res) {
+    const reqsubmit = req.body.secret;  // Get the secret from the request
+    console.log("Received secret:", reqsubmit);  // Log the received secret
+
+    if (!req.isAuthenticated()) {
+        console.log("User not authenticated");
+        return res.redirect("/login");  // Redirect to login if user is not authenticated
+    }
+
+    try {
+        // Ensure user is authenticated and has a valid ID
+        const foundUser = await User.findById(req.user.id);
+
+        if (!foundUser) {
+            console.log("User not found with ID:", req.user.id);
+            return res.status(404).send("User not found.");
+        }
+
+        // Set the secret for the found user
+        foundUser.secret = reqsubmit;
+
+        // Save the user with the updated secret
+        await foundUser.save();
+        console.log("Secret saved successfully for user:", req.user.id);
+        console.log(req.user)
+
+        res.redirect("/secrets");  // Redirect to /secrets
+    } catch (err) {
+        console.log("Error saving secret:", err);
+        res.status(500).send("Internal server error.");
+    }
+});
 
 
 app.get('/auth/google/secrets',
@@ -280,8 +322,10 @@ connectDB();
 const userScema = new mongoose.Schema({
     username: String,
     password: String,
-    googleId: String
+    googleId: String,
+    secret: String
 })
+
 
 // userScema.plugin(encrypt, { secret: secret, encryptedFields: ["password"] });
 userScema.plugin(passportLocalMongoose);
@@ -291,13 +335,22 @@ const User = mongoose.model("User", userScema)
 // passport.use(User.createStrategy);
 passport.use(new passportLocal.Strategy(User.authenticate()));
 
+// used to serialize the user for the session
 passport.serializeUser(function (user, done) {
-    done(null, user);
+    done(null, user.id);
+    // where is this user.id going? Are we supposed to access this anywhere?
 });
 
-passport.deserializeUser(function (user, done) {
-    done(null, user);
+// used to deserialize the user
+passport.deserializeUser(async function (id, done) {
+    try {
+        const user = await User.findById(id); // Use async/await
+        done(null, user);
+    } catch (err) {
+        done(err);
+    }
 });
+
 
 
 app.listen(port, function () {
