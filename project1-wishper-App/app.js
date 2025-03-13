@@ -24,8 +24,7 @@ import 'dotenv/config'
 const port = 3000;
 // const saltRounds = 10;
 
-const mongoURI = "mongodb://localhost:27017/userDB";
-
+const mongoURI = process.env.mongoURI
 
 const app = express();
 
@@ -54,7 +53,7 @@ passport.use(new GoogleStrategy({
     function (accessToken, refreshToken, profile, cb) {
         console.log(profile)
         User.findOrCreate({ googleId: profile.id }, function (err, user) {
-            
+
             return cb(err, user);
         });
     }
