@@ -78,27 +78,73 @@ app.post("/register", async function (req, res) {
     })
 });
 
-app.post("/login", async function (req, res) {
-    const user = new User({
-        email: req.body.username,
-        password: req.body.password
+
+app.post('/login',
+    function (req, res, next) {
+        console.log("Login attempt received...");
+        console.log("Username:", req.body.username);  // Log the username
+        console.log("Password:", req.body.password);  // Log the password
+
+        passport.authenticate('local', function (err, user, info) {
+            if (err) {
+                console.log("Error during authentication:", err);
+                return next(err);
+            }
+
+            if (!user) {
+                console.log("Authentication failed:", info);
+                return res.redirect('/login');
+            }
+
+            console.log("Authentication successful for user:", user.username); // Log username of authenticated user
+
+            req.logIn(user, function (err) {
+                if (err) {
+                    console.log("Error during login:", err);
+                    return next(err);
+                }
+
+                console.log("User successfully logged in. Session ID:", req.sessionID); // Log session info
+                res.redirect('/secrets');
+            });
+        })(req, res, next);
     });
 
-    req.logIn(user, function (err) {
-        if (err) {
-            console.log("errror in user", err)
-        }
-        else {
-            console.log("User registered successfully:", User); // Debugging log
-            passport.authenticate("local")(req, res, function () {
-                console.log("Authentication successful, redirecting..."); // Debugging log
-                res.redirect("/secrets");
-            })
-        }
-    })
+
+// app.post('/login',
+//     passport.authenticate('local', { failureRedirect: '/login' }),
+//     function (req, res) {
+//         res.redirect('/secrets');
+//     });
 
 
-});
+// app.post('/login',
+//     passport.authenticate('local', { failureRedirect: '/login' }),
+//     function (req, res) {
+//         res.redirect('');
+//     });
+
+// app.post("/login", async function (req, res) {
+//     const user = new User({
+//         email: req.body.username,
+//         password: req.body.password
+//     });
+
+//     req.logIn(user, function (err) {
+//         if (err) {
+//             console.log("errror in user", err)
+//         }
+//         else {
+//             console.log("User registered successfully:", User); // Debugging log
+//             passport.authenticate("local")(req, res, function () {
+//                 console.log("Authentication successful, redirecting..."); // Debugging log
+//                 res.redirect("/secrets");
+//             })
+//         }
+//     })
+
+
+// });
 
 // app.post("/register", async function (req, res) {
 
@@ -176,7 +222,7 @@ app.get("/login", function (req, res) {
 app.get('/logout', function (req, res, next) {
     req.logout(function (err) {
         if (err) { return next(err); }
-        res.redirect('/');
+        res.redirect('/secrets');
     });
 });
 
@@ -201,7 +247,7 @@ connectDB();
 
 
 const userScema = new mongoose.Schema({
-    email: String,
+    username: String,
     password: String
 })
 
