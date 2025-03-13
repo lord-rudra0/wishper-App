@@ -122,14 +122,22 @@ app.get('/auth/google/secrets',
 
 
 
-app.get("/secrets", function (req, res) {
-    if (req.isAuthenticated()) {
-        res.render("secrets");
-    }
-    else {
-        res.redirect("/login")
+app.get("/secrets", async function (req, res) {
+    try {
+        const foundUsers = await User.find({ "secret": { $ne: null } });
+
+        if (foundUsers) {
+            res.render("secrets", { userWithSecrets: foundUsers });
+        } else {
+            console.log("No users with secrets found");
+            res.render("secrets", { userWithSecrets: [] });
+        }
+    } catch (err) {
+        console.log(err);
+        res.status(500).send("Error retrieving secrets.");
     }
 });
+
 
 app.post("/register", async function (req, res) {
     const email = req.body.username;
